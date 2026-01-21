@@ -18,7 +18,8 @@ This program systematically searches for counterexamples by testing each value o
   - 100% deterministic for all 64-bit integers
 - **Montgomery multiplication** for 3x faster modular arithmetic (n < 2^63)
   - Hybrid implementation falls back to `__uint128_t` for larger moduli
-- **Optimized trial division** with 120 primes (up to 661)
+- **Optimized trial division** with 30 primes (up to 127)
+  - Tuned for Montgomery-accelerated MR: fewer primes = less overhead
 - **Reverse iteration** tests smallest prime candidates first for faster solutions
 - **Progress reporting** with throughput and 32-bit candidate statistics
 - **Scientific notation support** for command-line arguments
@@ -77,13 +78,13 @@ Iterations per scale: 1,000,000
 
 Scale       Bits     Rate (n/sec)    Avg checks  Time (s)
 --------------------------------------------------------------
-10^6          23        4,474,433          5.86      0.22
-10^9          33        3,211,180          8.22      0.31
-10^12         43        2,285,129         10.36      0.44
-10^15         53        1,788,249         12.97      0.56
-10^17         60        1,596,141         13.85      0.63
-10^18         63        1,388,892         15.51      0.72
-2e18          64        1,361,168         15.65      0.73
+10^6          23        5,241,804          5.86      0.19
+10^9          33        3,627,144          8.22      0.28
+10^12         43        2,611,116         10.36      0.38
+10^15         53        2,018,888         12.97      0.50
+10^17         60        1,781,972         13.85      0.56
+10^18         63        1,530,027         15.51      0.65
+2e18          64        1,510,163         15.65      0.66
 --------------------------------------------------------------
 ```
 
@@ -91,10 +92,10 @@ Scale       Bits     Rate (n/sec)    Avg checks  Time (s)
 
 | Range Start | Throughput | Notes |
 |-------------|------------|-------|
-| 10^6 | ~4,500,000 n/sec | Small numbers, fast |
-| 10^12 | ~2,300,000 n/sec | All candidates fit in 32-bit |
-| 10^15 | ~1,800,000 n/sec | Mixed 32/64-bit candidates |
-| 2*10^18 | ~1,360,000 n/sec | Near 64-bit limit |
+| 10^6 | ~5,200,000 n/sec | Small numbers, fast |
+| 10^12 | ~2,600,000 n/sec | All candidates fit in 32-bit |
+| 10^15 | ~2,000,000 n/sec | Mixed 32/64-bit candidates |
+| 2*10^18 | ~1,500,000 n/sec | Near 64-bit limit |
 
 ## Algorithm Details
 
@@ -104,8 +105,8 @@ For each n, the algorithm:
 1. Computes N = 8n + 3
 2. Iterates through odd values a in **reverse order** (from sqrt(N) down to 1)
 3. For each a, computes candidate p = (N - a^2) / 2
-4. Applies trial division with 120 small primes to filter composites
-5. Tests remaining candidates with FJ64_262K primality test
+4. Applies trial division with 30 small primes to filter ~80% of composites
+5. Tests remaining candidates with Montgomery-accelerated FJ64_262K primality test
 6. Returns the first valid (a, p) pair found, or reports a counterexample
 
 The reverse iteration order tests smaller prime candidates first, which are faster to verify and more likely to be prime.
@@ -151,6 +152,7 @@ For moduli n ≥ 2^63, the implementation falls back to standard `__uint128_t` a
 │   ├── prime_sizes.c         # Prime candidate size analysis
 │   ├── profile_breakdown.c   # Time breakdown profiler
 │   ├── trial_div_profile.c   # Trial division hit rate analysis
+│   ├── trial_div_tuning.c    # Trial division count optimization
 │   ├── wheel_analysis.c      # Wheel factorization potential analysis
 │   └── benchmark_montgomery.c # Montgomery vs standard comparison
 └── docs/

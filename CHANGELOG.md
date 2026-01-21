@@ -16,17 +16,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   - `trial_div_profile.c` - Trial division hit rate analysis
   - `wheel_analysis.c` - Wheel factorization potential (54.5% skippable)
   - `benchmark_montgomery.c` - Montgomery vs standard comparison
+  - `trial_div_tuning.c` - Trial division count optimization
+  - `trial_div_final.c` - Final 30 vs 120 prime comparison
 
 ### Changed
 - **prime.h** now uses Montgomery-accelerated Miller-Rabin by default
+- **Reduced trial division from 120 to 30 primes** (3-127)
+  - With Montgomery-accelerated MR, fewer trial primes is optimal
+  - 30 primes filter ~80% of composites with minimal overhead
+  - 120 primes filter ~85% but 90 extra modulo ops cost more than occasional MR
+  - Benchmarked: 30 primes is 7-11% faster than 120 at large n
 - Header dependency: `arith.h` → `arith_montgomery.h` → `prime.h` → `solve.h`
 
 ### Performance
-- **2.3x speedup** at 64-bit scale (n ~ 2×10^18)
-- ~4,500,000 n/sec at n = 10^6 (was ~3,000,000)
-- ~2,300,000 n/sec at n = 10^12 (was ~1,400,000)
-- ~1,800,000 n/sec at n = 10^15 (was ~1,000,000)
-- ~1,360,000 n/sec at n = 2×10^18 (was ~570,000)
+- **2.56x total speedup** at 64-bit scale (n ~ 2×10^18)
+- ~5,200,000 n/sec at n = 10^6 (was ~3,000,000)
+- ~2,600,000 n/sec at n = 10^12 (was ~1,400,000)
+- ~2,000,000 n/sec at n = 10^15 (was ~1,000,000)
+- ~1,510,000 n/sec at n = 2×10^18 (was ~570,000)
 
 ## [1.2.0] - 2026-01-21
 
@@ -42,7 +49,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   - Reports rate, average checks per n, and time
   - 10M iterations per scale for stable measurements
 - **Updated default search range**: Changed from 1M to 10M iterations (10^12 to 10^12 + 10^7)
-- **Extended trial division in prime.h**: Updated from 30 to 120 primes to match production code
+- **Extended trial division in prime.h**: Updated from 30 to 120 primes (later reverted in v1.3.0)
 
 ### Added
 - **Optional stats tracking in solve.h**: Define `SOLVE_TRACK_STATS` to enable candidate statistics
