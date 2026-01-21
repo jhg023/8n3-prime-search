@@ -13,11 +13,16 @@ We search for counterexamples to the conjecture:
 For each value of n in the search range:
 
 1. Compute N = 8n + 3
-2. Iterate through odd values a = 1, 3, 5, ... up to √N
+2. Iterate through odd values a in **reverse order**: √N, √N-2, ... down to 1
 3. For each a, compute candidate p = (N - a²) / 2
 4. Test if p ≥ 2 and p is prime
 5. If any valid (a, p) pair is found, move to the next n
 6. If no valid pair exists, report n as a counterexample
+
+**Why reverse order?** Larger values of `a` produce smaller prime candidates `p`. Smaller primes are:
+- Faster to verify (fewer modular operations)
+- More likely to be prime (prime density ~1/ln(p))
+- More likely to pass trial division quickly
 
 ### Key Observations
 
@@ -35,19 +40,42 @@ For the largest a ≈ √N:
 
 ### Optimizations
 
-1. **Trial Division Pre-filter**
-   - Test divisibility by first 30 primes (3 to 127)
-   - Eliminates ~82% of composite candidates
-   - Much faster than Miller-Rabin for small factors
+1. **Reverse Iteration Order**
+   - Test largest `a` first (smallest prime candidates)
+   - Smaller primes are faster to verify and more common
+   - Typically finds solutions in fewer iterations
 
-2. **Early Exit**
+2. **Optimized Trial Division**
+   - Test divisibility by 120 primes (3 to 661)
+   - Benchmarked to find optimal prime count for large n
+   - +12.4% throughput vs 30-prime baseline
+   - Eliminates most composites before expensive Miller-Rabin
+
+3. **Early Exit**
    - Stop searching for a given n once any valid (a, p) is found
-   - On average, only ~3.5 candidates are tested per n
+   - On average, only ~10-15 candidates are tested per n
 
-3. **FJ64_262K Primality Test**
+4. **FJ64_262K Primality Test**
    - Uses only 2 Miller-Rabin tests instead of 7
    - 512KB hash table selects optimal second witness
    - ~1.9x speedup over standard 7-witness test
+
+### Trial Division Optimization
+
+The optimal number of trial division primes was determined by benchmarking at n ~ 2×10¹⁸:
+
+| Trial Primes | Max Prime | Throughput | vs 30 primes |
+|--------------|-----------|------------|--------------|
+| 30 | 127 | 504,455 n/sec | baseline |
+| 50 | 233 | 530,867 n/sec | +5.2% |
+| 75 | 383 | 549,413 n/sec | +8.9% |
+| 100 | 547 | 557,381 n/sec | +10.5% |
+| **120** | **661** | **567,220 n/sec** | **+12.4%** |
+| 150 | 877 | 560,085 n/sec | +11.0% |
+| 200 | 1229 | 556,434 n/sec | +10.3% |
+| 308 | 2039 | 543,120 n/sec | +7.7% |
+
+Beyond ~120 primes, the cost of additional trial divisions outweighs the benefit of filtering more composites.
 
 ## FJ64_262K Primality Test
 
