@@ -1,0 +1,34 @@
+# Compiled binaries
+search
+benchmark
+
+# Object files
+*.o
+*.obj
+
+# Debug files
+*.dSYM/
+
+# Editor/IDE files
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# OS-specific
+.DS_Store
+Thumbs.db
+
+# Build artifacts
+*.out
+a.out
+
+# Logs
+*.log
+
+# Core dumps
+core
+core.*
