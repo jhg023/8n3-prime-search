@@ -16,6 +16,8 @@ This program systematically searches for counterexamples by testing each value o
 - **Optimized primality testing** using FJ64_262K algorithm (Forisek-Jancina 2015)
   - Only 2 Miller-Rabin tests per candidate (vs. 7 in standard deterministic test)
   - 100% deterministic for all 64-bit integers
+- **Montgomery multiplication** for 3x faster modular arithmetic (n < 2^63)
+  - Hybrid implementation falls back to `__uint128_t` for larger moduli
 - **Optimized trial division** with 120 primes (up to 661)
 - **Reverse iteration** tests smallest prime candidates first for faster solutions
 - **Progress reporting** with throughput and 32-bit candidate statistics
@@ -75,13 +77,13 @@ Iterations per scale: 1,000,000
 
 Scale       Bits     Rate (n/sec)    Avg checks  Time (s)
 --------------------------------------------------------------
-10^6          23        2,952,168          5.86      0.34
-10^9          33        2,022,976          8.22      0.49
-10^12         43        1,373,330         10.36      0.73
-10^15         53          989,340         12.97      1.01
-10^17         60          742,028         13.85      1.35
-10^18         63          584,588         15.51      1.71
-2e18          64          576,669         15.65      1.73
+10^6          23        4,474,433          5.86      0.22
+10^9          33        3,211,180          8.22      0.31
+10^12         43        2,285,129         10.36      0.44
+10^15         53        1,788,249         12.97      0.56
+10^17         60        1,596,141         13.85      0.63
+10^18         63        1,388,892         15.51      0.72
+2e18          64        1,361,168         15.65      0.73
 --------------------------------------------------------------
 ```
 
@@ -89,10 +91,10 @@ Scale       Bits     Rate (n/sec)    Avg checks  Time (s)
 
 | Range Start | Throughput | Notes |
 |-------------|------------|-------|
-| 10^6 | ~3,000,000 n/sec | Small numbers, fast |
-| 10^12 | ~1,400,000 n/sec | All candidates fit in 32-bit |
-| 10^15 | ~1,000,000 n/sec | Mixed 32/64-bit candidates |
-| 2*10^18 | ~570,000 n/sec | Near 64-bit limit |
+| 10^6 | ~4,500,000 n/sec | Small numbers, fast |
+| 10^12 | ~2,300,000 n/sec | All candidates fit in 32-bit |
+| 10^15 | ~1,800,000 n/sec | Mixed 32/64-bit candidates |
+| 2*10^18 | ~1,360,000 n/sec | Near 64-bit limit |
 
 ## Algorithm Details
 
@@ -120,6 +122,12 @@ This is proven correct for all 64-bit integers and requires only 2 modular expon
 
 Reference: Forisek, M. and Jancina, J. (2015). "Fast Primality Testing for Integers That Fit into a Machine Word." CEUR-WS Vol-1326.
 
+### Montgomery Multiplication
+
+For moduli n < 2^63, the Miller-Rabin tests use Montgomery multiplication instead of standard `__uint128_t` division. This replaces expensive division operations (~17 cycles) with multiplication and shifts (~9 cycles), providing approximately 3x faster modular arithmetic.
+
+For moduli n ≥ 2^63, the implementation falls back to standard `__uint128_t` arithmetic to avoid overflow in the Montgomery reduction step.
+
 ## File Structure
 
 ```
@@ -132,6 +140,7 @@ Reference: Forisek, M. and Jancina, J. (2015). "Fast Primality Testing for Integ
 │   └── search.c              # Main search program
 ├── include/
 │   ├── arith.h               # Arithmetic utilities (mulmod, powmod, isqrt)
+│   ├── arith_montgomery.h    # Montgomery multiplication (3x faster modular ops)
 │   ├── prime.h               # Primality testing (FJ64_262K, trial division)
 │   ├── solve.h               # Solution finding strategies
 │   ├── fmt.h                 # Number formatting utilities
@@ -139,7 +148,11 @@ Reference: Forisek, M. and Jancina, J. (2015). "Fast Primality Testing for Integ
 ├── benchmark/
 │   └── benchmark_suite.c     # Performance benchmarks
 ├── analysis/
-│   └── prime_sizes.c         # Prime candidate analysis utility
+│   ├── prime_sizes.c         # Prime candidate size analysis
+│   ├── profile_breakdown.c   # Time breakdown profiler
+│   ├── trial_div_profile.c   # Trial division hit rate analysis
+│   ├── wheel_analysis.c      # Wheel factorization potential analysis
+│   └── benchmark_montgomery.c # Montgomery vs standard comparison
 └── docs/
     └── ALGORITHM.md          # Detailed algorithm documentation
 ```

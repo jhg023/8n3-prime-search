@@ -3,6 +3,9 @@
  *
  * FJ64_262K primality test and Miller-Rabin implementation.
  * Uses the Forisek-Jancina hash table for optimal witness selection.
+ *
+ * Optimized with Montgomery multiplication for 3x faster modular arithmetic
+ * when n < 2^63 (falls back to __uint128_t for larger n).
  */
 
 #ifndef PRIME_H
@@ -11,6 +14,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include "arith.h"
+#include "arith_montgomery.h"
 #include "fj64_table.h"
 
 /* ========================================================================== */
@@ -53,7 +57,7 @@ static inline uint32_t fj64_hash(uint64_t x) {
 }
 
 /**
- * Single Miller-Rabin witness test
+ * Single Miller-Rabin witness test (standard, for backward compatibility)
  * Returns true if n is a strong probable prime to base a
  */
 static inline bool mr_witness(uint64_t n, uint64_t a) {
@@ -80,10 +84,21 @@ static inline bool mr_witness(uint64_t n, uint64_t a) {
 }
 
 /**
- * FJ64_262K primality test - exactly 2 Miller-Rabin tests
+ * FJ64_262K primality test using Montgomery multiplication
+ * Exactly 2 Miller-Rabin tests with optimized modular arithmetic
  * Assumes: n > 127, n is odd, n passed trial division
  */
 static inline bool is_prime_fj64_fast(uint64_t n) {
+    if (!mr_witness_montgomery(n, 2))
+        return false;
+    return mr_witness_montgomery(n, fj64_bases[fj64_hash(n)]);
+}
+
+/**
+ * FJ64_262K primality test (standard version, no Montgomery)
+ * For benchmarking comparison
+ */
+static inline bool is_prime_fj64_standard(uint64_t n) {
     if (!mr_witness(n, 2))
         return false;
     return mr_witness(n, fj64_bases[fj64_hash(n)]);

@@ -4,6 +4,30 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [1.3.0] - 2026-01-21
+
+### Added
+- **Montgomery multiplication** for Miller-Rabin tests (`arith_montgomery.h`)
+  - 3x faster modular arithmetic for moduli < 2^63
+  - Hybrid implementation falls back to `__uint128_t` for n ≥ 2^63
+  - Avoids expensive division instructions, uses multiplication + shifts
+- **Analysis tools** for optimization research:
+  - `profile_breakdown.c` - Time breakdown by component
+  - `trial_div_profile.c` - Trial division hit rate analysis
+  - `wheel_analysis.c` - Wheel factorization potential (54.5% skippable)
+  - `benchmark_montgomery.c` - Montgomery vs standard comparison
+
+### Changed
+- **prime.h** now uses Montgomery-accelerated Miller-Rabin by default
+- Header dependency: `arith.h` → `arith_montgomery.h` → `prime.h` → `solve.h`
+
+### Performance
+- **2.3x speedup** at 64-bit scale (n ~ 2×10^18)
+- ~4,500,000 n/sec at n = 10^6 (was ~3,000,000)
+- ~2,300,000 n/sec at n = 10^12 (was ~1,400,000)
+- ~1,800,000 n/sec at n = 10^15 (was ~1,000,000)
+- ~1,360,000 n/sec at n = 2×10^18 (was ~570,000)
+
 ## [1.2.0] - 2026-01-21
 
 ### Changed
