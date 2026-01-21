@@ -1,6 +1,6 @@
 # Compiled binaries
 search
-benchmark
+benchmark/benchmark_suite
 
 # Object files
 *.o

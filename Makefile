@@ -1,4 +1,4 @@
-# Makefile for Counterexample Search: 8n + 3 = a² + 2p
+# Makefile for Counterexample Search: 8n + 3 = a^2 + 2p
 
 CC = gcc
 CFLAGS = -Wall -Wextra -std=c11 -Iinclude
@@ -10,20 +10,24 @@ OPT_FLAGS = -O3 -march=native -mtune=native -flto -fomit-frame-pointer -funroll-
 # Debug flags
 DEBUG_FLAGS = -g -O0 -DDEBUG -fsanitize=address -fsanitize=undefined
 
-# Source files
+# Directories
 SRC_DIR = src
 INCLUDE_DIR = include
 BENCHMARK_DIR = benchmark
 
 # Targets
 TARGET = search
-BENCHMARK_TARGET = benchmark
+BENCHMARK_TARGET = benchmark_suite
 
 # Source files
 SEARCH_SRC = $(SRC_DIR)/search.c
-BENCHMARK_SRC = $(BENCHMARK_DIR)/benchmark.c
+BENCHMARK_SRC = $(BENCHMARK_DIR)/benchmark_suite.c
 
-.PHONY: all release debug clean benchmark help
+# Header dependencies
+HEADERS = $(INCLUDE_DIR)/fmt.h $(INCLUDE_DIR)/arith.h $(INCLUDE_DIR)/prime.h \
+          $(INCLUDE_DIR)/solve.h $(INCLUDE_DIR)/fj64_table.h
+
+.PHONY: all release debug clean benchmark test run-benchmark help
 
 # Default: optimized build
 all: release
@@ -38,12 +42,12 @@ debug: LDFLAGS += -fsanitize=address -fsanitize=undefined
 debug: $(TARGET)
 
 # Main search program
-$(TARGET): $(SEARCH_SRC) $(INCLUDE_DIR)/fj64_table.h
+$(TARGET): $(SEARCH_SRC) $(HEADERS)
 	$(CC) $(CFLAGS) -o $@ $(SEARCH_SRC) $(LDFLAGS)
 
-# Benchmark program
+# Benchmark suite
 benchmark: CFLAGS += $(OPT_FLAGS)
-benchmark: $(BENCHMARK_SRC) $(INCLUDE_DIR)/fj64_table.h
+benchmark: $(BENCHMARK_SRC) $(HEADERS)
 	$(CC) $(CFLAGS) -o $(BENCHMARK_DIR)/$(BENCHMARK_TARGET) $(BENCHMARK_SRC) $(LDFLAGS)
 
 # Clean build artifacts
@@ -56,25 +60,35 @@ clean:
 test: release
 	./$(TARGET) 1 10000
 
-# Run benchmark
+# Run benchmark suite
 run-benchmark: benchmark
 	./$(BENCHMARK_DIR)/$(BENCHMARK_TARGET)
 
+# Run quick benchmark
+run-benchmark-quick: benchmark
+	./$(BENCHMARK_DIR)/$(BENCHMARK_TARGET) --quick
+
 # Help
 help:
-	@echo "Counterexample Search: 8n + 3 = a² + 2p"
+	@echo "Counterexample Search: 8n + 3 = a^2 + 2p"
 	@echo ""
 	@echo "Targets:"
-	@echo "  all          Build optimized release (default)"
-	@echo "  release      Build with full optimizations"
-	@echo "  debug        Build with debug symbols and sanitizers"
-	@echo "  benchmark    Build the benchmark program"
-	@echo "  clean        Remove build artifacts"
-	@echo "  test         Run a quick test (n = 1 to 10000)"
-	@echo "  run-benchmark Run performance benchmarks"
-	@echo "  help         Show this help message"
+	@echo "  all               Build optimized release (default)"
+	@echo "  release           Build with full optimizations"
+	@echo "  debug             Build with debug symbols and sanitizers"
+	@echo "  benchmark         Build the benchmark suite"
+	@echo "  clean             Remove build artifacts"
+	@echo "  test              Run a quick test (n = 1 to 10000)"
+	@echo "  run-benchmark     Run benchmark (10M iterations/scale)"
+	@echo "  run-benchmark-quick  Run quick benchmark (1M iterations/scale)"
+	@echo "  help              Show this help message"
 	@echo ""
 	@echo "Usage:"
-	@echo "  make              # Build optimized version"
-	@echo "  ./search          # Run with default range [10^12, 10^12 + 10^6)"
-	@echo "  ./search 1e9 2e9  # Run with custom range"
+	@echo "  make                  # Build optimized version"
+	@echo "  ./search              # Run with default range [10^12, 10^12 + 10^7)"
+	@echo "  ./search 1e9 2e9      # Run with custom range"
+	@echo ""
+	@echo "Benchmark Options:"
+	@echo "  ./benchmark/benchmark_suite             # Default (10M iterations)"
+	@echo "  ./benchmark/benchmark_suite --quick     # Quick (1M iterations)"
+	@echo "  ./benchmark/benchmark_suite --count N   # Custom iteration count"

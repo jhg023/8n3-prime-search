@@ -1,13 +1,13 @@
-# Counterexample Search: 8n + 3 = a² + 2p
+# Counterexample Search: 8n + 3 = a^2 + 2p
 
-A high-performance search for counterexamples to the conjecture that every integer of the form 8n + 3 can be expressed as a² + 2p, where a is a positive odd integer and p is prime.
+A high-performance search for counterexamples to the conjecture that every integer of the form 8n + 3 can be expressed as a^2 + 2p, where a is a positive odd integer and p is prime.
 
 ## Background
 
 This conjecture states that for every positive integer n, the number 8n + 3 can be written as the sum of an odd square and twice a prime. For example:
-- n = 1: 8(1) + 3 = 11 = 1² + 2(5)
-- n = 2: 8(2) + 3 = 19 = 3² + 2(5)
-- n = 3: 8(3) + 3 = 27 = 1² + 2(13)
+- n = 1: 8(1) + 3 = 11 = 1^2 + 2(5)
+- n = 2: 8(2) + 3 = 19 = 3^2 + 2(5)
+- n = 3: 8(3) + 3 = 27 = 1^2 + 2(13)
 
 This program systematically searches for counterexamples by testing each value of n and attempting to find a valid (a, p) pair.
 
@@ -15,106 +15,84 @@ This program systematically searches for counterexamples by testing each value o
 
 - **Optimized primality testing** using FJ64_262K algorithm (Forisek-Jancina 2015)
   - Only 2 Miller-Rabin tests per candidate (vs. 7 in standard deterministic test)
-  - 1.9x faster than traditional 7-witness Miller-Rabin
   - 100% deterministic for all 64-bit integers
 - **Optimized trial division** with 120 primes (up to 661)
-  - Benchmarked optimal count for large n (~2×10¹⁸)
-  - +12.4% throughput vs. 30-prime baseline
 - **Reverse iteration** tests smallest prime candidates first for faster solutions
 - **Progress reporting** with throughput and 32-bit candidate statistics
 - **Scientific notation support** for command-line arguments
+- **Benchmark suite** for comparing performance across scales
 
 ## Building
 
 ```bash
-# Standard build
+# Build optimized release (default)
 make
 
-# Optimized build (recommended)
-make release
-
-# Build with debugging symbols
+# Build with debugging symbols and sanitizers
 make debug
+
+# Build benchmark suite
+make benchmark
 
 # Clean build artifacts
 make clean
 ```
 
-Or compile directly:
-
-```bash
-gcc -O3 -march=native -flto -o search src/search.c -lm -Iinclude
-```
-
 ## Usage
 
 ```bash
-# Default: search n ∈ [10¹², 10¹² + 10⁶)
+# Default: search n in [10^12, 10^12 + 10^7)
 ./search
 
 # Custom range
 ./search <n_start> <n_end>
 
 # Examples
-./search 1 1000000           # Search n ∈ [1, 10⁶)
-./search 1e9 2e9             # Search n ∈ [10⁹, 2×10⁹)
-./search 1e12 1.001e12       # Search n ∈ [10¹², 10¹² + 10⁹)
+./search 1 1000000           # Search n in [1, 10^6)
+./search 1e9 2e9             # Search n in [10^9, 2*10^9)
+./search 1e15 1.00001e15     # Search n in [10^15, 10^15 + 10^10)
 ```
 
-## Output
+## Benchmarking
 
+The benchmark suite tests throughput at various scales from 10^6 to 2*10^18:
+
+```bash
+# Run benchmark (10M iterations per scale, ~1 minute)
+make run-benchmark
+
+# Quick benchmark (1M iterations per scale, ~10 seconds)
+make run-benchmark-quick
+
+# Custom iteration count
+./benchmark/benchmark_suite --count 5000000
 ```
-==================================================================
-     Counterexample Search: 8n + 3 = a² + 2p
-     (Optimized with FJ64_262K primality test)
-==================================================================
 
-Configuration:
-  Range: n in [1,000,000,000,000, 1,000,001,000,000)
-  Count: 1,000,000 values
-  Primality test: FJ64_262K (2 Miller-Rabin tests)
+Sample output:
+```
+Benchmark: 8n + 3 = a^2 + 2p
+Iterations per scale: 1,000,000
 
-Verifying known solutions...
-  n=1: N=11, given (1,5), found (1,5) ... PASS
-  n=2: N=19, given (3,5), found (3,5) ... PASS
-  n=3: N=27, given (1,13), found (1,13) ... PASS
-  n=4: N=35, given (5,5), found (1,17) ... PASS
-
-Starting search...
-
-n = 1,000,000,016,384 (1.6%), rate = 458,723 n/sec, max_a = 923, 32-bit: 98.2%
-n = 1,000,000,049,152 (4.9%), rate = 461,205 n/sec, max_a = 1,107, 32-bit: 98.1%
-...
-
-===================================================================
-RESULTS
-===================================================================
-
-Total time:           2.1 seconds
-Total throughput:     461,538 n/sec
-Counterexamples:      0
-Maximum a observed:   1,275 (at n = 1,000,000,084,376)
-Candidates tested:    3,482,156
-32-bit candidates:    3,419,872 (98.21%)
+Scale       Bits     Rate (n/sec)    Avg checks  Time (s)
+--------------------------------------------------------------
+10^6          23        2,952,168          5.86      0.34
+10^9          33        2,022,976          8.22      0.49
+10^12         43        1,373,330         10.36      0.73
+10^15         53          989,340         12.97      1.01
+10^17         60          742,028         13.85      1.35
+10^18         63          584,588         15.51      1.71
+2e18          64          576,669         15.65      1.73
+--------------------------------------------------------------
 ```
 
 ## Performance
 
-| Range Start | Throughput | 32-bit Candidates | Notes |
-|-------------|------------|-------------------|-------|
-| 10¹² | ~1,360,000 n/sec | 100% | All candidates fit in 32-bit |
-| 10¹⁵ | ~970,000 n/sec | ~76% | Mixed 32/64-bit candidates |
-| 2×10¹⁸ | ~560,000 n/sec | ~6% | Near 64-bit limit |
-
-### Primality Test Comparison
-
-The FJ64_262K algorithm provides significant speedup over alternatives:
-
-| Algorithm | Time (relative) | Miller-Rabin Tests | Memory |
-|-----------|-----------------|-------------------|--------|
-| **FJ64_262K** | **1.0x** | 2 | 512 KB |
-| BPSW | 1.2x | 1 + Lucas | ~340 B |
-| 7-witness MR | 1.9x | 7 | None |
+| Range Start | Throughput | Notes |
+|-------------|------------|-------|
+| 10^6 | ~3,000,000 n/sec | Small numbers, fast |
+| 10^12 | ~1,400,000 n/sec | All candidates fit in 32-bit |
+| 10^15 | ~1,000,000 n/sec | Mixed 32/64-bit candidates |
+| 2*10^18 | ~570,000 n/sec | Near 64-bit limit |
 
 ## Algorithm Details
 
@@ -122,8 +100,8 @@ The FJ64_262K algorithm provides significant speedup over alternatives:
 
 For each n, the algorithm:
 1. Computes N = 8n + 3
-2. Iterates through odd values a in **reverse order** (from √N down to 1)
-3. For each a, computes candidate p = (N - a²) / 2
+2. Iterates through odd values a in **reverse order** (from sqrt(N) down to 1)
+3. For each a, computes candidate p = (N - a^2) / 2
 4. Applies trial division with 120 small primes to filter composites
 5. Tests remaining candidates with FJ64_262K primality test
 6. Returns the first valid (a, p) pair found, or reports a counterexample
@@ -149,15 +127,21 @@ Reference: Forisek, M. and Jancina, J. (2015). "Fast Primality Testing for Integ
 ├── README.md
 ├── LICENSE
 ├── Makefile
-├── .gitignore
+├── CHANGELOG.md
 ├── src/
-│   └── search.c           # Main search program
+│   └── search.c              # Main search program
 ├── include/
-│   └── fj64_table.h       # FJ64_262K hash table (512KB)
+│   ├── arith.h               # Arithmetic utilities (mulmod, powmod, isqrt)
+│   ├── prime.h               # Primality testing (FJ64_262K, trial division)
+│   ├── solve.h               # Solution finding strategies
+│   ├── fmt.h                 # Number formatting utilities
+│   └── fj64_table.h          # FJ64_262K hash table (512KB)
 ├── benchmark/
-│   └── benchmark.c        # Performance benchmarks
+│   └── benchmark_suite.c     # Performance benchmarks
+├── analysis/
+│   └── prime_sizes.c         # Prime candidate analysis utility
 └── docs/
-    └── ALGORITHM.md       # Detailed algorithm documentation
+    └── ALGORITHM.md          # Detailed algorithm documentation
 ```
 
 ## Exit Codes
@@ -183,8 +167,3 @@ MIT License - see [LICENSE](LICENSE) for details.
 1. Forisek, M. and Jancina, J. (2015). "Fast Primality Testing for Integers That Fit into a Machine Word." CEUR-WS Vol-1326. http://ceur-ws.org/Vol-1326/020-Forisek.pdf
 
 2. Original conjecture and related work on representing integers as sums of squares and primes.
-
-## Acknowledgments
-
-- Michal Forisek and Jakub Jancina for the FJ64_262K primality test and precomputed hash table
-- The number theory community for work on prime representation conjectures

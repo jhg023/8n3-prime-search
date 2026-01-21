@@ -4,6 +4,34 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [1.2.0] - 2026-01-21
+
+### Changed
+- **Refactored codebase**: Deduplicated code by moving shared functionality to header files
+  - `search.c` now uses shared headers instead of inline implementations
+  - Reduced `search.c` from ~520 lines to ~290 lines
+- **Merged solve headers**: Combined `solve.h` and `solve_opt.h` into single `solve.h`
+  - All iteration strategies now in one file
+  - Default `find_solution()` uses large-to-small (fastest strategy)
+- **Simplified benchmark suite**: Replaced complex multi-mode benchmark with focused throughput test
+  - Tests 7 scales from 10^6 to 2*10^18 (~64-bit limit)
+  - Reports rate, average checks per n, and time
+  - 10M iterations per scale for stable measurements
+- **Updated default search range**: Changed from 1M to 10M iterations (10^12 to 10^12 + 10^7)
+- **Extended trial division in prime.h**: Updated from 30 to 120 primes to match production code
+
+### Added
+- **Optional stats tracking in solve.h**: Define `SOLVE_TRACK_STATS` to enable candidate statistics
+- **Helper functions in solve.h**: `trial_division_check()` and `is_candidate_prime()`
+
+### Removed
+- `include/solve_opt.h` (merged into `solve.h`)
+- `benchmark/benchmark.c` (replaced by `benchmark_suite.c`)
+- Duplicate implementations in `search.c`
+
+### Fixed
+- Header dependency chain now properly organized: `arith.h` -> `prime.h` -> `solve.h`
+
 ## [1.1.0] - 2026-01-21
 
 ### Changed
@@ -12,7 +40,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   - Improves solution-finding speed
 - **Expanded trial division**: Increased from 30 primes (up to 127) to 120 primes (up to 661)
   - Benchmarked across different counts to find optimal configuration
-  - +12.4% throughput improvement at large n (~2×10¹⁸)
+  - +12.4% throughput improvement at large n (~2*10^18)
 - **Unbuffered stdout**: Added `setbuf(stdout, NULL)` for real-time progress output
 
 ### Added
@@ -24,9 +52,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   - Previous code could cause infinite loops or false counterexamples
 
 ### Performance
-- ~1,360,000 n/sec throughput at n = 10¹² (100% 32-bit candidates)
-- ~970,000 n/sec throughput at n = 10¹⁵ (76% 32-bit candidates)
-- ~560,000 n/sec throughput at n = 2×10¹⁸ (6% 32-bit candidates)
+- ~1,360,000 n/sec throughput at n = 10^12 (100% 32-bit candidates)
+- ~970,000 n/sec throughput at n = 10^15 (76% 32-bit candidates)
+- ~560,000 n/sec throughput at n = 2*10^18 (6% 32-bit candidates)
 
 ## [1.0.0] - 2025-01-21
 
@@ -41,9 +69,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Documentation of algorithm and performance characteristics
 
 ### Performance
-- ~460,000 n/sec throughput at n = 10¹²
-- ~380,000 n/sec throughput at n = 10¹⁴
-- ~310,000 n/sec throughput at n = 10¹⁶
+- ~460,000 n/sec throughput at n = 10^12
+- ~380,000 n/sec throughput at n = 10^14
+- ~310,000 n/sec throughput at n = 10^16
 
 ### Technical Details
 - FJ64_262K uses 512KB hash table for witness selection
