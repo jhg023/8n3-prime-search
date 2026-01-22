@@ -68,9 +68,18 @@ static inline double solve_get_avg_checks(void) {
 /**
  * Check if candidate is filtered by trial division
  * Returns: 0 = composite (filtered), 1 = is small prime, 2 = needs Miller-Rabin
+ *
+ * Optimization: Inline first 3 primes (3, 5, 7) which catch ~50% of composites.
+ * This avoids loop overhead for the most common filtering cases.
  */
 static inline int trial_division_check(uint64_t candidate) {
-    for (int i = 0; i < NUM_TRIAL_PRIMES; i++) {
+    /* Inline first 3 primes - catch ~50% of composites */
+    if (candidate % 3 == 0) return (candidate == 3) ? 1 : 0;
+    if (candidate % 5 == 0) return (candidate == 5) ? 1 : 0;
+    if (candidate % 7 == 0) return (candidate == 7) ? 1 : 0;
+
+    /* Check remaining primes 11-127 via loop */
+    for (int i = 3; i < NUM_TRIAL_PRIMES; i++) {
         if (candidate % TRIAL_PRIMES[i] == 0) {
             return (candidate == TRIAL_PRIMES[i]) ? 1 : 0;
         }
