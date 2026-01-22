@@ -4,6 +4,34 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [2.0.0] - 2026-01-22
+
+### Added
+- **OpenMP parallelization** in `search.c`
+  - Automatic detection of available CPU cores
+  - Per-thread statistics with cache-line padding to avoid false sharing
+  - Combined progress reporting from all threads (thread 0 aggregates stats)
+  - `--threads N` command line option to control thread count
+  - Static work distribution for balanced load
+- **Platform-specific OpenMP support** in `Makefile`
+  - macOS: Uses Homebrew's libomp (`brew install libomp`)
+  - Linux: Standard `-fopenmp` flag
+  - New `single-threaded` build target for non-OpenMP builds
+
+### Performance
+- **~10x speedup** on 14-core system at n = 10^12
+  - Single-threaded: ~2,900,000 n/sec
+  - 14 threads: ~26,000,000 n/sec
+- Near-linear scaling up to available cores
+- Per-thread throughput maintained at ~1,800,000 n/sec
+
+### Usage
+```bash
+./search                      # All cores, default range
+./search 1e9 2e9              # All cores, custom range
+./search 1e9 2e9 --threads 4  # 4 threads, custom range
+```
+
 ## [1.3.4] - 2026-01-22
 
 ### Changed

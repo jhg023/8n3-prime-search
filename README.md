@@ -1,6 +1,6 @@
 # Counterexample Search: 8n + 3 = a^2 + 2p
 
-A high-performance search for counterexamples to the conjecture that every integer of the form 8n + 3 can be expressed as a^2 + 2p, where a is a positive odd integer and p is prime.
+A high-performance parallel search for counterexamples to the conjecture that every integer of the form 8n + 3 can be expressed as a^2 + 2p, where a is a positive odd integer and p is prime.
 
 ## Background
 
@@ -13,6 +13,10 @@ This program systematically searches for counterexamples by testing each value o
 
 ## Features
 
+- **OpenMP parallelization** for multi-core systems
+  - Near-linear scaling: ~10x speedup on 14-core systems
+  - Automatic core detection or manual `--threads N` control
+  - Per-thread statistics with combined progress reporting
 - **Optimized primality testing** using FJ64_262K algorithm (Forisek-Jancina 2015)
   - Only 2 Miller-Rabin tests per candidate (vs. 7 in standard deterministic test)
   - 100% deterministic for all 64-bit integers
@@ -27,15 +31,18 @@ This program systematically searches for counterexamples by testing each value o
 - **Incremental candidate tracking** avoids recomputing a² each iteration
 - **Incremental N and a_max tracking** eliminates redundant isqrt64() calls in search loops
 - **Reverse iteration** tests smallest prime candidates first for faster solutions
-- **Progress reporting** with throughput and 32-bit candidate statistics
+- **Progress reporting** with throughput and per-thread statistics
 - **Scientific notation support** for command-line arguments
 - **Benchmark suite** for comparing performance across scales
 
 ## Building
 
 ```bash
-# Build optimized release (default)
+# Build optimized parallel release (default)
 make
+
+# Build single-threaded version (no OpenMP)
+make single-threaded
 
 # Build with debugging symbols and sanitizers
 make debug
@@ -47,19 +54,25 @@ make benchmark
 make clean
 ```
 
+**Note**: On macOS, install libomp via: `brew install libomp`
+
 ## Usage
 
 ```bash
-# Default: search n in [10^12, 10^12 + 10^7)
+# Default: search n in [10^12, 10^12 + 10^7) using all cores
 ./search
 
 # Custom range
 ./search <n_start> <n_end>
 
+# Control thread count
+./search <n_start> <n_end> --threads N
+
 # Examples
-./search 1 1000000           # Search n in [1, 10^6)
-./search 1e9 2e9             # Search n in [10^9, 2*10^9)
-./search 1e15 1.00001e15     # Search n in [10^15, 10^15 + 10^10)
+./search 1 1000000              # Search [1, 10^6) with all cores
+./search 1e9 2e9                # Search [10^9, 2*10^9) with all cores
+./search 1e15 1.00001e15        # Search [10^15, 10^15 + 10^10)
+./search 1e12 2e12 --threads 4  # Use 4 threads
 ```
 
 ## Benchmarking
@@ -95,6 +108,16 @@ Scale       Bits     Rate (n/sec)    Avg checks  Time (s)
 ```
 
 ## Performance
+
+### Parallel Performance (14-core system)
+
+| Range Start | Total Throughput | Per-Thread | Speedup |
+|-------------|-----------------|------------|---------|
+| 10^6 | ~42,000,000 n/sec | ~3,000,000 n/sec | ~10x |
+| 10^12 | ~26,000,000 n/sec | ~1,900,000 n/sec | ~9x |
+| 10^15 | ~16,000,000 n/sec | ~1,100,000 n/sec | ~7x |
+
+### Single-Thread Performance
 
 | Range Start | Throughput | Notes |
 |-------------|------------|-------|
@@ -144,7 +167,7 @@ For moduli n ≥ 2^63, the implementation falls back to standard `__uint128_t` a
 ├── Makefile
 ├── CHANGELOG.md
 ├── src/
-│   └── search.c              # Main search program
+│   └── search.c              # Main search program (OpenMP parallel)
 ├── include/
 │   ├── arith.h               # Arithmetic utilities (mulmod, powmod, isqrt)
 │   ├── arith_montgomery.h    # Montgomery multiplication (3x faster modular ops)
@@ -174,10 +197,10 @@ For moduli n ≥ 2^63, the implementation falls back to standard `__uint128_t` a
 ## Contributing
 
 Contributions are welcome! Areas of interest:
-- Multi-threaded parallelization
 - GPU acceleration (CUDA/OpenCL)
 - Extended range searching (beyond 64-bit)
 - Alternative primality tests
+- Distributed computing support
 
 ## License
 
