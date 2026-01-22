@@ -77,18 +77,24 @@ BenchResult run_benchmark(uint64_t n_start, uint64_t count) {
         (void)a;
     }
 
-    /* Timed run - also count how many a values we check */
+    /* Timed run using incremental N and a_max tracking
+     *
+     * Key insight: N = 8n + 3 increases by 8 each step, but a_max = isqrt(N)
+     * changes extremely rarely. At n ~ 2×10^18, a_max ~ 3×10^9, so a_max
+     * increases by 2 only every ~1.5 billion n values. We maintain N and
+     * a_max incrementally to avoid calling isqrt64 per iteration.
+     */
     uint64_t total_checks = 0;
     double start = get_time();
 
-    for (uint64_t i = 0; i < count; i++) {
-        uint64_t n = n_start + i;
-        uint64_t N = 8 * n + 3;
-        uint64_t a_max = isqrt64(N);
-        if ((a_max & 1) == 0) a_max--;
+    /* Initialize N and a_max */
+    uint64_t N = 8 * n_start + 3;
+    uint64_t a_max = isqrt64(N);
+    if ((a_max & 1) == 0) a_max--;
 
+    for (uint64_t i = 0; i < count; i++) {
         uint64_t p;
-        uint64_t a_found = find_solution(n, &p);
+        uint64_t a_found = find_solution_from_N(N, a_max, &p);
 
         /*
          * Count checks: we iterate from a_max down to a_found
@@ -96,6 +102,15 @@ BenchResult run_benchmark(uint64_t n_start, uint64_t count) {
          */
         if (a_found > 0) {
             total_checks += (a_max - a_found) / 2 + 1;
+        }
+
+        /* Update N and a_max for next iteration */
+        N += 8;
+
+        /* Check if a_max needs to increase (happens very rarely) */
+        uint64_t next_a = a_max + 2;
+        if (next_a * next_a <= N) {
+            a_max = next_a;
         }
     }
 

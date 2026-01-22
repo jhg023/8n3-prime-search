@@ -48,6 +48,10 @@
 
 /**
  * Run the search over a range of n values
+ *
+ * Uses incremental N and a_max tracking for better performance:
+ * - N = 8n + 3 increases by 8 each step
+ * - a_max = isqrt(N) changes very rarely (every ~a_max/2 iterations)
  */
 void run_search(uint64_t n_start, uint64_t n_end,
                 uint64_t *out_counterexamples) {
@@ -59,16 +63,28 @@ void run_search(uint64_t n_start, uint64_t n_end,
     /* Reset statistics */
     solve_reset_stats();
 
+    /* Initialize N and a_max for incremental tracking */
+    uint64_t N = 8 * n_start + 3;
+    uint64_t a_max = isqrt64(N);
+    if ((a_max & 1) == 0) a_max--;
+
     for (uint64_t n = n_start; n < n_end; n++) {
         uint64_t p;
-        uint64_t a = find_solution(n, &p);
+        uint64_t a = find_solution_from_N(N, a_max, &p);
 
         if (a == 0) {
             /* Counterexample found! */
             counterexamples_found++;
             printf("COUNTEREXAMPLE: n = %s (N = %s)\n",
-                   fmt_num(n), fmt_num(8 * n + 3));
+                   fmt_num(n), fmt_num(N));
             fflush(stdout);
+        }
+
+        /* Update N and a_max for next iteration */
+        N += 8;
+        uint64_t next_a = a_max + 2;
+        if (next_a * next_a <= N) {
+            a_max = next_a;
         }
 
         /* Progress reporting - check only every 16384 iterations */

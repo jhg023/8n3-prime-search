@@ -22,6 +22,7 @@ This program systematically searches for counterexamples by testing each value o
 - **Optimized trial division** with 30 primes (up to 127)
   - Tuned for Montgomery-accelerated MR: fewer primes = less overhead
 - **Incremental candidate tracking** avoids recomputing a² each iteration
+- **Incremental N and a_max tracking** eliminates redundant isqrt64() calls in search loops
 - **Reverse iteration** tests smallest prime candidates first for faster solutions
 - **Progress reporting** with throughput and 32-bit candidate statistics
 - **Scientific notation support** for command-line arguments
@@ -94,10 +95,10 @@ Scale       Bits     Rate (n/sec)    Avg checks  Time (s)
 
 | Range Start | Throughput | Notes |
 |-------------|------------|-------|
-| 10^6 | ~5,200,000 n/sec | Small numbers, fast |
-| 10^12 | ~2,600,000 n/sec | All candidates fit in 32-bit |
-| 10^15 | ~2,000,000 n/sec | Mixed 32/64-bit candidates |
-| 2*10^18 | ~1,500,000 n/sec | Near 64-bit limit |
+| 10^6 | ~5,850,000 n/sec | Small numbers, fast |
+| 10^12 | ~2,815,000 n/sec | All candidates fit in 32-bit |
+| 10^15 | ~2,126,000 n/sec | Mixed 32/64-bit candidates |
+| 2*10^18 | ~1,587,000 n/sec | Near 64-bit limit |
 
 ## Algorithm Details
 

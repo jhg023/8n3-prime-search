@@ -94,10 +94,11 @@ static inline bool is_candidate_prime(uint64_t candidate) {
 /* ========================================================================== */
 
 /**
- * Find a solution to 8n + 3 = a^2 + 2p
+ * Find a solution to 8n + 3 = a^2 + 2p (pre-computed N and a_max version)
  *
- * Iterates a in reverse order (largest first) to test smaller prime
- * candidates first. This is faster because smaller primes are more common.
+ * This version takes N and a_max directly, avoiding redundant isqrt64 calls
+ * when the caller already has these values (e.g., in search loops where
+ * a_max changes very rarely as n increases).
  *
  * Optimizations:
  * 1. Track candidate incrementally instead of computing a*a each time.
@@ -108,13 +109,7 @@ static inline bool is_candidate_prime(uint64_t candidate) {
  * Returns the largest valid a, or 0 if no solution exists (counterexample).
  * Optionally returns the corresponding prime p via out parameter.
  */
-static inline uint64_t find_solution(uint64_t n, uint64_t* p_out) {
-    uint64_t N = 8 * n + 3;
-    uint64_t a_max = isqrt64(N);
-
-    /* Ensure a_max is odd */
-    if ((a_max & 1) == 0) a_max--;
-
+static inline uint64_t find_solution_from_N(uint64_t N, uint64_t a_max, uint64_t* p_out) {
     /* Initialize candidate = (N - a_max²) / 2 and delta = 2*(a_max - 1) */
     uint64_t a = a_max;
     uint64_t candidate = (N - a * a) >> 1;
@@ -144,6 +139,23 @@ static inline uint64_t find_solution(uint64_t n, uint64_t* p_out) {
 
     SOLVE_TRACK_SOLUTION_FOUND();  /* Count even if no solution (counterexample) */
     return 0;  /* Counterexample! */
+}
+
+/**
+ * Find a solution to 8n + 3 = a^2 + 2p
+ *
+ * Convenience wrapper that computes N and a_max from n.
+ * For high-throughput loops, prefer find_solution_from_N() with
+ * incrementally-maintained N and a_max values.
+ */
+static inline uint64_t find_solution(uint64_t n, uint64_t* p_out) {
+    uint64_t N = 8 * n + 3;
+    uint64_t a_max = isqrt64(N);
+
+    /* Ensure a_max is odd */
+    if ((a_max & 1) == 0) a_max--;
+
+    return find_solution_from_N(N, a_max, p_out);
 }
 
 /* ========================================================================== */

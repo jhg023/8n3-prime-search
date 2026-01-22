@@ -4,6 +4,25 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [1.3.3] - 2026-01-22
+
+### Changed
+- **Incremental N and a_max tracking** in search loops (`solve.h`, `search.c`, `benchmark_suite.c`)
+  - Added `find_solution_from_N(N, a_max, p_out)` function that takes pre-computed values
+  - N = 8n + 3 increases by 8 each step; a_max = isqrt(N) changes very rarely
+  - At n ~ 2×10^18, a_max only increases every ~1.5 billion iterations
+  - Eliminates redundant isqrt64() calls in high-throughput loops
+
+### Performance
+- ~5,856,000 n/sec at n = 10^6 (+7.6% from v1.3.2)
+- ~2,815,000 n/sec at n = 10^12 (+4.4% from v1.3.2)
+- ~2,126,000 n/sec at n = 10^15 (+3.5% from v1.3.2)
+- ~1,587,000 n/sec at n = 2×10^18 (+3.1% from v1.3.2)
+
+### Not Implemented (analyzed but no benefit)
+- **Incremental residue updates for trial division**: Maintaining 30 residue states per-iteration is slower than direct 64-bit modulo operations (-36% performance)
+- **Bitset sieve for batched trial division**: Overhead of batch processing exceeds benefit of parallel divisibility checks
+
 ## [1.3.2] - 2026-01-22
 
 ### Changed
