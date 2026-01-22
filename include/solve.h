@@ -69,20 +69,39 @@ static inline double solve_get_avg_checks(void) {
  * Check if candidate is filtered by trial division
  * Returns: 0 = composite (filtered), 1 = is small prime, 2 = needs Miller-Rabin
  *
- * Optimization: Inline first 3 primes (3, 5, 7) which catch ~50% of composites.
- * This avoids loop overhead for the most common filtering cases.
+ * Optimizations:
+ * - Inline first 7 primes (3,5,7,11,13,17,19) which catch ~65% of composites
+ * - Unroll remaining loop 4x to reduce branch overhead
  */
 static inline int trial_division_check(uint64_t candidate) {
-    /* Inline first 3 primes - catch ~50% of composites */
+    /* Inline first 7 primes - catch ~65% of composites */
     if (candidate % 3 == 0) return (candidate == 3) ? 1 : 0;
     if (candidate % 5 == 0) return (candidate == 5) ? 1 : 0;
     if (candidate % 7 == 0) return (candidate == 7) ? 1 : 0;
+    if (candidate % 11 == 0) return (candidate == 11) ? 1 : 0;
+    if (candidate % 13 == 0) return (candidate == 13) ? 1 : 0;
+    if (candidate % 17 == 0) return (candidate == 17) ? 1 : 0;
+    if (candidate % 19 == 0) return (candidate == 19) ? 1 : 0;
 
-    /* Check remaining primes 11-127 via loop */
-    for (int i = 3; i < NUM_TRIAL_PRIMES; i++) {
-        if (candidate % TRIAL_PRIMES[i] == 0) {
+    /* Check remaining primes 23-127 with 4x unrolled loop */
+    /* Primes[7..29] = 23,29,31,37,41,43,47,53,59,61,67,71,73,79,83,89,97,101,103,107,109,113,127 */
+    int i = 7;
+    while (i + 3 < NUM_TRIAL_PRIMES) {
+        if (candidate % TRIAL_PRIMES[i] == 0)
             return (candidate == TRIAL_PRIMES[i]) ? 1 : 0;
-        }
+        if (candidate % TRIAL_PRIMES[i+1] == 0)
+            return (candidate == TRIAL_PRIMES[i+1]) ? 1 : 0;
+        if (candidate % TRIAL_PRIMES[i+2] == 0)
+            return (candidate == TRIAL_PRIMES[i+2]) ? 1 : 0;
+        if (candidate % TRIAL_PRIMES[i+3] == 0)
+            return (candidate == TRIAL_PRIMES[i+3]) ? 1 : 0;
+        i += 4;
+    }
+    /* Handle remaining 1-3 primes */
+    while (i < NUM_TRIAL_PRIMES) {
+        if (candidate % TRIAL_PRIMES[i] == 0)
+            return (candidate == TRIAL_PRIMES[i]) ? 1 : 0;
+        i++;
     }
     return 2;
 }

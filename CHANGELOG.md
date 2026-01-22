@@ -4,6 +4,30 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [1.3.4] - 2026-01-22
+
+### Changed
+- **FJ64 hash table prefetch** in `is_prime_fj64_fast()` (`prime.h`)
+  - Compute hash index early and issue prefetch before Montgomery constant computation
+  - Hides memory latency by overlapping cache fetch with CPU work
+- **Extended trial division inlining** in `trial_division_check()` (`solve.h`)
+  - Inline first 7 primes (3,5,7,11,13,17,19) instead of 3, catching ~65% of composites
+  - Unroll remaining loop 4x to reduce branch overhead
+
+### Performance
+- ~6,711,000 n/sec at n = 10^6 (+1.5% from v1.3.3)
+- ~4,119,000 n/sec at n = 10^9 (+2.4% from v1.3.3)
+- ~2,914,000 n/sec at n = 10^12 (+2.0% from v1.3.3)
+- ~2,203,000 n/sec at n = 10^15 (+0.9% from v1.3.3)
+- ~1,645,000 n/sec at n = 10^18 (+0.8% from v1.3.3)
+
+### Not Implemented (analyzed but no benefit)
+- **Wheel factorization (mod 6)**: -2 to -4% (overhead exceeds benefit given early-exit)
+- **Legendre symbol tables**: -18 to -33% (per-N setup cost too high)
+- **Bitset sieve for batch trial division**: -32 to -68% (defeats early-exit strategy)
+- **Extended trial division (50+ primes)**: -1 to -6% (extra modulos > saved MR tests)
+- **Speculative next-candidate prefetch**: ~0% (hash computation not memory-bound)
+
 ## [1.3.3] - 2026-01-22
 
 ### Changed

@@ -20,7 +20,10 @@ This program systematically searches for counterexamples by testing each value o
   - Hybrid implementation falls back to `__uint128_t` for larger moduli
   - Montgomery constants cached across both Miller-Rabin witness tests
 - **Optimized trial division** with 30 primes (up to 127)
+  - First 7 primes inlined for ~65% composite filtering with minimal overhead
+  - Remaining primes checked with 4x unrolled loop
   - Tuned for Montgomery-accelerated MR: fewer primes = less overhead
+- **FJ64 hash table prefetch** hides memory latency during Montgomery setup
 - **Incremental candidate tracking** avoids recomputing a² each iteration
 - **Incremental N and a_max tracking** eliminates redundant isqrt64() calls in search loops
 - **Reverse iteration** tests smallest prime candidates first for faster solutions
@@ -81,13 +84,13 @@ Iterations per scale: 1,000,000
 
 Scale       Bits     Rate (n/sec)    Avg checks  Time (s)
 --------------------------------------------------------------
-10^6          23        5,241,804          5.86      0.19
-10^9          33        3,627,144          8.22      0.28
-10^12         43        2,611,116         10.36      0.38
-10^15         53        2,018,888         12.97      0.50
-10^17         60        1,781,972         13.85      0.56
-10^18         63        1,530,027         15.51      0.65
-2e18          64        1,510,163         15.65      0.66
+10^6          23        6,711,409          5.86      0.15
+10^9          33        4,118,870          8.22      0.24
+10^12         43        2,913,854         10.36      0.34
+10^15         53        2,203,084         12.97      0.45
+10^17         60        1,929,641         13.85      0.52
+10^18         63        1,645,134         15.51      0.61
+2e18          64        1,619,538         15.65      0.62
 --------------------------------------------------------------
 ```
 
@@ -95,10 +98,10 @@ Scale       Bits     Rate (n/sec)    Avg checks  Time (s)
 
 | Range Start | Throughput | Notes |
 |-------------|------------|-------|
-| 10^6 | ~5,850,000 n/sec | Small numbers, fast |
-| 10^12 | ~2,815,000 n/sec | All candidates fit in 32-bit |
-| 10^15 | ~2,126,000 n/sec | Mixed 32/64-bit candidates |
-| 2*10^18 | ~1,587,000 n/sec | Near 64-bit limit |
+| 10^6 | ~6,700,000 n/sec | Small numbers, fast |
+| 10^12 | ~2,900,000 n/sec | All candidates fit in 32-bit |
+| 10^15 | ~2,200,000 n/sec | Mixed 32/64-bit candidates |
+| 2*10^18 | ~1,620,000 n/sec | Near 64-bit limit |
 
 ## Algorithm Details
 

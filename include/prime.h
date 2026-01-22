@@ -83,16 +83,22 @@ static inline bool mr_witness(uint64_t n, uint64_t a) {
  * Exactly 2 Miller-Rabin tests with optimized modular arithmetic
  * Assumes: n > 127, n is odd, n passed trial division
  *
- * Optimization: Pre-compute Montgomery constants once and reuse for both witnesses
+ * Optimizations:
+ * - Pre-compute Montgomery constants once and reuse for both witnesses
+ * - Prefetch hash table entry while computing Montgomery constants
  */
 static inline bool is_prime_fj64_fast(uint64_t n) {
+    /* Compute hash and prefetch table entry early (hides memory latency) */
+    uint32_t hash_idx = fj64_hash(n);
+    __builtin_prefetch(&fj64_bases[hash_idx], 0, 3);
+
     /* Pre-compute Montgomery constants once for both witness tests */
     uint64_t n_inv = montgomery_inverse(n);
     uint64_t r_sq = montgomery_r_squared(n);
 
     if (!mr_witness_montgomery_cached(n, 2, n_inv, r_sq))
         return false;
-    return mr_witness_montgomery_cached(n, fj64_bases[fj64_hash(n)], n_inv, r_sq);
+    return mr_witness_montgomery_cached(n, fj64_bases[hash_idx], n_inv, r_sq);
 }
 
 /**
