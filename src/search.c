@@ -87,8 +87,8 @@ void run_search(uint64_t n_start, uint64_t n_end,
             a_max = next_a;
         }
 
-        /* Progress reporting - check only every 16384 iterations */
-        if ((n & 0x3FFF) == 0) {
+        /* Progress reporting - check every 262144 iterations (~6 checks/sec at 1.5M n/sec) */
+        if ((n & 0x3FFFF) == 0) {
             clock_t now = clock();
             double elapsed = (double)(now - start_time) / CLOCKS_PER_SEC;
             if (elapsed - last_progress_time >= PROGRESS_SECONDS) {
