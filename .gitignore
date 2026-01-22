@@ -2,6 +2,12 @@
 search
 benchmark/benchmark_suite
 
+# Analysis directory: ignore everything except source files
+analysis/*
+!analysis/*.c
+!analysis/*.h
+!analysis/*.md
+
 # Object files
 *.o
 *.obj
