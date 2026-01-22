@@ -4,6 +4,25 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [1.3.2] - 2026-01-22
+
+### Changed
+- **Branchless exponentiation** in Miller-Rabin witness test (`arith_montgomery.h`)
+  - Use conditional select instead of conditional branch in exponentiation loop
+  - Avoids branch misprediction when exponent bits are unpredictable
+  - ~3% speedup for Miller-Rabin tests
+
+### Performance
+- ~2,796,000 n/sec at n = 10^12 (+2.6% from v1.3.1)
+- ~2,126,000 n/sec at n = 10^15 (+2.6% from v1.3.1)
+- ~1,598,000 n/sec at n = 2×10^18 (+4.2% from v1.3.1)
+
+### Not Implemented (analyzed but no benefit)
+- **Branchless Montgomery reduction**: Branch version is 7% faster (branch is predictable)
+- **FJ64 table prefetch**: Table fits in cache; prefetch adds overhead
+- **Alternative compiler flags**: `-Ofast`, `-ffast-math`, etc. provide no improvement
+- **Loop alignment attributes**: No measurable benefit
+
 ## [1.3.1] - 2026-01-22
 
 ### Changed

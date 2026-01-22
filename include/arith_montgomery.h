@@ -103,16 +103,20 @@ static inline bool mr_witness_montgomery_safe(uint64_t n, uint64_t a, uint64_t n
     uint64_t one_m = montgomery_reduce(r_sq, n, n_inv);
     uint64_t neg_one_m = n - one_m;
 
-    /* Compute a^d mod n */
+    /* Compute a^d mod n using branchless exponentiation */
     uint64_t a_m = montgomery_reduce((__uint128_t)a * r_sq, n, n_inv);
     uint64_t x_m = one_m;
     uint64_t base_m = a_m;
     uint64_t exp = d;
 
+    /*
+     * Branchless exponentiation: always compute the multiply, use conditional
+     * select. This avoids branch mispredictions which are costly when the
+     * exponent bits are unpredictable.
+     */
     while (exp > 0) {
-        if (exp & 1) {
-            x_m = montgomery_mul(x_m, base_m, n, n_inv);
-        }
+        uint64_t temp = montgomery_mul(x_m, base_m, n, n_inv);
+        x_m = (exp & 1) ? temp : x_m;
         base_m = montgomery_mul(base_m, base_m, n, n_inv);
         exp >>= 1;
     }
