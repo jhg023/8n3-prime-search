@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [2.0.1] - 2026-01-22
+
+### Added
+- **ETA in progress reporting** - Shows estimated time remaining based on current throughput
+  - Human-readable format: "8h 45m", "2d 3h", "15m 30s"
+  - Calculated from remaining work and current rate
+
 ## [2.0.0] - 2026-01-22
 
 ### Added

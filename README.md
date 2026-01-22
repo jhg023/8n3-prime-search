@@ -31,7 +31,7 @@ This program systematically searches for counterexamples by testing each value o
 - **Incremental candidate tracking** avoids recomputing a² each iteration
 - **Incremental N and a_max tracking** eliminates redundant isqrt64() calls in search loops
 - **Reverse iteration** tests smallest prime candidates first for faster solutions
-- **Progress reporting** with throughput and per-thread statistics
+- **Progress reporting** with throughput, ETA, and per-thread statistics
 - **Scientific notation support** for command-line arguments
 - **Benchmark suite** for comparing performance across scales
 

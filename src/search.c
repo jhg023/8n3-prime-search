@@ -50,6 +50,35 @@
 #define MAX_THREADS 256
 
 /* ========================================================================== */
+/* Time Formatting                                                            */
+/* ========================================================================== */
+
+/**
+ * Format seconds into human-readable time string (e.g., "2h 15m 30s")
+ * Uses a static buffer - not thread-safe, but only called from thread 0
+ */
+static const char* fmt_time(double seconds) {
+    static char buf[64];
+
+    if (seconds < 60) {
+        snprintf(buf, sizeof(buf), "%.0fs", seconds);
+    } else if (seconds < 3600) {
+        int mins = (int)(seconds / 60);
+        int secs = (int)(seconds) % 60;
+        snprintf(buf, sizeof(buf), "%dm %ds", mins, secs);
+    } else if (seconds < 86400) {
+        int hours = (int)(seconds / 3600);
+        int mins = ((int)(seconds) % 3600) / 60;
+        snprintf(buf, sizeof(buf), "%dh %dm", hours, mins);
+    } else {
+        int days = (int)(seconds / 86400);
+        int hours = ((int)(seconds) % 86400) / 3600;
+        snprintf(buf, sizeof(buf), "%dd %dh", days, hours);
+    }
+    return buf;
+}
+
+/* ========================================================================== */
 /* Per-Thread Statistics                                                      */
 /* ========================================================================== */
 
@@ -236,20 +265,20 @@ void run_search_parallel(uint64_t n_start, uint64_t n_end, int num_threads,
                 if (elapsed - last_report_time >= PROGRESS_SECONDS) {
                     /* Sum up all thread statistics */
                     uint64_t sum_processed = 0;
-                    uint64_t sum_checks = 0;
                     for (int t = 0; t < nthreads; t++) {
                         sum_processed += thread_stats[t].n_processed;
-                        sum_checks += thread_stats[t].total_checks;
                     }
 
                     double rate = sum_processed / elapsed;
                     double pct = 100.0 * sum_processed / total;
-                    double avg_checks = (sum_processed > 0) ?
-                        (double)sum_checks / sum_processed : 0.0;
 
-                    printf("[%d threads] n ~ %s (%.1f%%), rate = %s n/sec, avg_checks = %.2f\n",
+                    /* Calculate ETA */
+                    uint64_t remaining = total - sum_processed;
+                    double eta_seconds = (rate > 0) ? remaining / rate : 0;
+
+                    printf("[%d threads] n ~ %s (%.1f%%), rate = %s n/sec, ETA: %s\n",
                            nthreads, fmt_num(n_start + sum_processed), pct,
-                           fmt_num((uint64_t)rate), avg_checks);
+                           fmt_num((uint64_t)rate), fmt_time(eta_seconds));
                     fflush(stdout);
 
                     last_report_time = elapsed;
