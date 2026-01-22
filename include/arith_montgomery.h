@@ -170,4 +170,17 @@ static inline bool mr_witness_montgomery(uint64_t n, uint64_t a) {
     }
 }
 
+/**
+ * Miller-Rabin witness test with pre-computed Montgomery constants
+ * Use when calling multiple witnesses on the same n
+ */
+static inline bool mr_witness_montgomery_cached(uint64_t n, uint64_t a,
+                                                 uint64_t n_inv, uint64_t r_sq) {
+    if (n < MONTGOMERY_SAFE_THRESHOLD) {
+        return mr_witness_montgomery_safe(n, a, n_inv, r_sq);
+    } else {
+        return mr_witness_std(n, a);
+    }
+}
+
 #endif /* ARITH_MONTGOMERY_H */

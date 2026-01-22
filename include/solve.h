@@ -99,6 +99,12 @@ static inline bool is_candidate_prime(uint64_t candidate) {
  * Iterates a in reverse order (largest first) to test smaller prime
  * candidates first. This is faster because smaller primes are more common.
  *
+ * Optimizations:
+ * 1. Track candidate incrementally instead of computing a*a each time.
+ *    When a decreases by 2: new_candidate = old_candidate + delta
+ *    where delta = 2*(a-1) initially and decreases by 4 each step.
+ * 2. Track delta separately to avoid multiplication in inner loop.
+ *
  * Returns the largest valid a, or 0 if no solution exists (counterexample).
  * Optionally returns the corresponding prime p via out parameter.
  */
@@ -109,15 +115,15 @@ static inline uint64_t find_solution(uint64_t n, uint64_t* p_out) {
     /* Ensure a_max is odd */
     if ((a_max & 1) == 0) a_max--;
 
-    /* Iterate in reverse: largest a first means smallest candidate p first */
+    /* Initialize candidate = (N - a_max²) / 2 and delta = 2*(a_max - 1) */
     uint64_t a = a_max;
+    uint64_t candidate = (N - a * a) >> 1;
+    uint64_t delta = 2 * (a - 1);
+
+    /* Iterate in reverse: largest a first means smallest candidate p first */
     while (1) {
-        uint64_t a_sq = a * a;
-
         /* Ensure candidate p >= 2 */
-        if (a_sq <= N - 4) {
-            uint64_t candidate = (N - a_sq) >> 1;
-
+        if (candidate >= 2) {
             SOLVE_TRACK_CANDIDATE(candidate);
 
             if (is_candidate_prime(candidate)) {
@@ -129,6 +135,10 @@ static inline uint64_t find_solution(uint64_t n, uint64_t* p_out) {
 
         /* Decrement a by 2, checking for underflow */
         if (a < 3) break;
+
+        /* Update candidate and delta incrementally */
+        candidate += delta;
+        delta -= 4;
         a -= 2;
     }
 
