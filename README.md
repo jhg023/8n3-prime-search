@@ -18,8 +18,10 @@ This program systematically searches for counterexamples by testing each value o
   - 100% deterministic for all 64-bit integers
 - **Montgomery multiplication** for 3x faster modular arithmetic (n < 2^63)
   - Hybrid implementation falls back to `__uint128_t` for larger moduli
+  - Montgomery constants cached across both Miller-Rabin witness tests
 - **Optimized trial division** with 30 primes (up to 127)
   - Tuned for Montgomery-accelerated MR: fewer primes = less overhead
+- **Incremental candidate tracking** avoids recomputing a² each iteration
 - **Reverse iteration** tests smallest prime candidates first for faster solutions
 - **Progress reporting** with throughput and 32-bit candidate statistics
 - **Scientific notation support** for command-line arguments
@@ -104,7 +106,7 @@ Scale       Bits     Rate (n/sec)    Avg checks  Time (s)
 For each n, the algorithm:
 1. Computes N = 8n + 3
 2. Iterates through odd values a in **reverse order** (from sqrt(N) down to 1)
-3. For each a, computes candidate p = (N - a^2) / 2
+3. Tracks candidate p incrementally using delta updates (avoids recomputing a² each step)
 4. Applies trial division with 30 small primes to filter ~80% of composites
 5. Tests remaining candidates with Montgomery-accelerated FJ64_262K primality test
 6. Returns the first valid (a, p) pair found, or reports a counterexample

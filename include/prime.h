@@ -82,11 +82,17 @@ static inline bool mr_witness(uint64_t n, uint64_t a) {
  * FJ64_262K primality test using Montgomery multiplication
  * Exactly 2 Miller-Rabin tests with optimized modular arithmetic
  * Assumes: n > 127, n is odd, n passed trial division
+ *
+ * Optimization: Pre-compute Montgomery constants once and reuse for both witnesses
  */
 static inline bool is_prime_fj64_fast(uint64_t n) {
-    if (!mr_witness_montgomery(n, 2))
+    /* Pre-compute Montgomery constants once for both witness tests */
+    uint64_t n_inv = montgomery_inverse(n);
+    uint64_t r_sq = montgomery_r_squared(n);
+
+    if (!mr_witness_montgomery_cached(n, 2, n_inv, r_sq))
         return false;
-    return mr_witness_montgomery(n, fj64_bases[fj64_hash(n)]);
+    return mr_witness_montgomery_cached(n, fj64_bases[fj64_hash(n)], n_inv, r_sq);
 }
 
 /**

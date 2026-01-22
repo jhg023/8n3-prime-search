@@ -4,6 +4,29 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [1.3.1] - 2026-01-22
+
+### Changed
+- **Montgomery constant caching** in `is_prime_fj64_fast()` (`prime.h`)
+  - Pre-compute `n_inv` and `r_sq` once and reuse for both Miller-Rabin witnesses
+  - Saves ~8-12 ns per candidate by avoiding redundant computation
+  - Added `mr_witness_montgomery_cached()` function in `arith_montgomery.h`
+- **Incremental candidate tracking with delta** in `find_solution()` (`solve.h`)
+  - Track delta separately instead of computing `2*(a-1)` each iteration
+  - Update loop: `candidate += delta; delta -= 4; a -= 2`
+  - Reduces iteration overhead from ~1 ns/iter to ~0.3 ns/iter
+
+### Performance
+- Modest improvements (0-5%) depending on scale
+- ~2,725,000 n/sec at n = 10^12
+- ~1,535,000 n/sec at n = 2×10^18
+
+### Not Implemented (analyzed but no benefit)
+- **Wheel factorization**: Lookup overhead (~0.6 ns) negates benefit of skipping 53% of candidates
+- **Fewer trial primes**: 30 remains optimal; fewer primes = more expensive MR tests
+- **Loop unrolling**: Compiler already does an excellent job
+- **Branch hints**: `__builtin_expect` provided no measurable improvement
+
 ## [1.3.0] - 2026-01-21
 
 ### Added
