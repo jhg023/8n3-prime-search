@@ -12,6 +12,9 @@ analysis/*
 *.o
 *.obj
 
+# Assembly files
+*.s
+
 # Debug files
 *.dSYM/
 
