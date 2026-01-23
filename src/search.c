@@ -207,8 +207,11 @@ void run_search_parallel(uint64_t n_start, uint64_t n_end, int num_threads,
     start_time = (double)clock() / CLOCKS_PER_SEC;
 #endif
 
-    /* Progress reporting timing */
-    double last_report_time = 0.0;
+    /* Progress reporting timing - shared across threads */
+    volatile double last_report_time = 0.0;
+
+    /* Early termination flag for counterexamples */
+    volatile int found_counterexample = 0;
 
 #ifdef _OPENMP
     omp_set_num_threads(num_threads);
@@ -235,25 +238,32 @@ void run_search_parallel(uint64_t n_start, uint64_t n_end, int num_threads,
 
         /* Process this thread's range */
         for (uint64_t n = my_start; n < my_end; n++) {
+            /* Check for early termination */
+            if (found_counterexample) break;
+
             uint64_t a = find_solution_parallel(n, tid);
 
             if (a == 0) {
                 /* Counterexample found! */
                 local_counterexamples++;
+                found_counterexample = 1;  /* Signal all threads to stop */
 #ifdef _OPENMP
                 #pragma omp critical
 #endif
                 {
-                    printf("COUNTEREXAMPLE: n = %s (thread %d)\n",
-                           fmt_num(n), tid);
+                    printf("\n*** COUNTEREXAMPLE FOUND! ***\n");
+                    printf("n = %s (thread %d)\n", fmt_num(n), tid);
+                    printf("N = 8n + 3 = %s\n", fmt_num(8*n + 3));
+                    printf("No valid (a, p) pair exists!\n\n");
                     fflush(stdout);
                 }
+                break;  /* This thread stops immediately */
             }
 
             local_progress++;
 
-            /* Progress reporting (thread 0 only, every ~262K iterations) */
-            if (tid == 0 && (local_progress & 0x3FFFF) == 0) {
+            /* Progress reporting (any thread can report, with locking) */
+            if ((local_progress & 0x3FFFF) == 0) {
                 double now;
 #ifdef _OPENMP
                 now = omp_get_wtime();
@@ -262,26 +272,35 @@ void run_search_parallel(uint64_t n_start, uint64_t n_end, int num_threads,
 #endif
                 double elapsed = now - start_time;
 
+                /* Only one thread reports at a time */
                 if (elapsed - last_report_time >= PROGRESS_SECONDS) {
-                    /* Sum up all thread statistics */
-                    uint64_t sum_processed = 0;
-                    for (int t = 0; t < nthreads; t++) {
-                        sum_processed += thread_stats[t].n_processed;
+#ifdef _OPENMP
+                    #pragma omp critical
+#endif
+                    {
+                        /* Double-check timing inside critical section */
+                        if (elapsed - last_report_time >= PROGRESS_SECONDS) {
+                            /* Sum up all thread statistics */
+                            uint64_t sum_processed = 0;
+                            for (int t = 0; t < nthreads; t++) {
+                                sum_processed += thread_stats[t].n_processed;
+                            }
+
+                            double rate = sum_processed / elapsed;
+                            double pct = 100.0 * sum_processed / total;
+
+                            /* Calculate ETA */
+                            uint64_t remaining = total - sum_processed;
+                            double eta_seconds = (rate > 0) ? remaining / rate : 0;
+
+                            printf("[%d threads] n ~ %s (%.1f%%), rate = %s n/sec, ETA: %s\n",
+                                   nthreads, fmt_num(n_start + sum_processed), pct,
+                                   fmt_num((uint64_t)rate), fmt_time(eta_seconds));
+                            fflush(stdout);
+
+                            last_report_time = elapsed;
+                        }
                     }
-
-                    double rate = sum_processed / elapsed;
-                    double pct = 100.0 * sum_processed / total;
-
-                    /* Calculate ETA */
-                    uint64_t remaining = total - sum_processed;
-                    double eta_seconds = (rate > 0) ? remaining / rate : 0;
-
-                    printf("[%d threads] n ~ %s (%.1f%%), rate = %s n/sec, ETA: %s\n",
-                           nthreads, fmt_num(n_start + sum_processed), pct,
-                           fmt_num((uint64_t)rate), fmt_time(eta_seconds));
-                    fflush(stdout);
-
-                    last_report_time = elapsed;
                 }
             }
         }

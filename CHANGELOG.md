@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [2.0.2] - 2026-01-22
+
+### Fixed
+- **Progress reporting now continues until completion** - Previously, only thread 0 reported progress, so reports stopped when thread 0 finished its chunk. Now any thread can report progress.
+- **Early termination on counterexample** - All threads now stop immediately when a counterexample is found, rather than continuing to search their entire ranges.
+
+### Changed
+- Progress reporting uses double-checked locking to avoid duplicate reports
+- Counterexample output now includes more detail (N value, explanation)
+
 ## [2.0.1] - 2026-01-22
 
 ### Added
