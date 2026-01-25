@@ -20,6 +20,12 @@
 #include "arith.h"
 #include "prime.h"
 
+/* Forward declaration for sieve support (include prime_sieve.h for full API) */
+typedef struct PrimeSieve PrimeSieve;
+/* Defined in prime_sieve.h - we forward-declare to avoid circular dependency */
+extern bool sieve_is_prime(const PrimeSieve *sieve, uint64_t n);
+extern bool sieve_in_range(const PrimeSieve *sieve, uint64_t n);
+
 /* ========================================================================== */
 /* Statistics Tracking (optional)                                             */
 /* ========================================================================== */
@@ -184,6 +190,117 @@ static inline uint64_t find_solution(uint64_t n, uint64_t* p_out) {
     if ((a_max & 1) == 0) a_max--;
 
     return find_solution_from_N(N, a_max, p_out);
+}
+
+/* ========================================================================== */
+/* Sieve-Enabled Solution Finder                                              */
+/* ========================================================================== */
+
+#ifdef SOLVE_WITH_SIEVE_STATS
+static uint64_t solve_sieve_hits = 0;       /* Primes found via sieve lookup */
+static uint64_t solve_sieve_misses = 0;     /* Primes found via Miller-Rabin */
+
+static inline void solve_reset_sieve_stats(void) {
+    solve_sieve_hits = 0;
+    solve_sieve_misses = 0;
+}
+
+static inline double solve_sieve_hit_rate(void) {
+    uint64_t total = solve_sieve_hits + solve_sieve_misses;
+    return (total > 0) ? (100.0 * solve_sieve_hits / total) : 0.0;
+}
+
+static inline void solve_get_sieve_stats(uint64_t *hits, uint64_t *misses) {
+    if (hits) *hits = solve_sieve_hits;
+    if (misses) *misses = solve_sieve_misses;
+}
+
+#define SOLVE_TRACK_SIEVE_HIT()   solve_sieve_hits++
+#define SOLVE_TRACK_SIEVE_MISS()  solve_sieve_misses++
+#else
+#define SOLVE_TRACK_SIEVE_HIT()   ((void)0)
+#define SOLVE_TRACK_SIEVE_MISS()  ((void)0)
+#endif
+
+/**
+ * Test if a candidate prime is actually prime, using sieve when available.
+ * Falls back to Miller-Rabin for candidates outside sieve range.
+ */
+static inline bool is_candidate_prime_with_sieve(uint64_t candidate, const PrimeSieve *sieve) {
+    /* Trial division first (handles small primes and filters ~80% composites) */
+    int td = trial_division_check(candidate);
+    if (td == 0) return false;  /* Composite */
+    if (td == 1) return true;   /* Small prime (3-127) */
+
+    /* Candidate is > 127 and passed trial division */
+    /* Try sieve lookup first if candidate is in range */
+    if (sieve && sieve_in_range(sieve, candidate)) {
+        SOLVE_TRACK_SIEVE_HIT();
+        return sieve_is_prime(sieve, candidate);
+    }
+
+    /* Fall back to Miller-Rabin */
+    SOLVE_TRACK_SIEVE_MISS();
+    return is_prime_fj64_fast(candidate);
+}
+
+/**
+ * Find a solution to 8n + 3 = a^2 + 2p using sieve for small candidates.
+ *
+ * This version uses the pre-computed prime sieve for O(1) lookup when
+ * candidate p is within the sieve threshold. Since we iterate from
+ * largest a (smallest p), most solutions should hit the sieve.
+ *
+ * Parameters:
+ *   N      - The value 8n + 3
+ *   a_max  - Maximum odd a to try
+ *   sieve  - Prime sieve for fast lookup (can be NULL)
+ *   p_out  - Output parameter for prime p (can be NULL)
+ *
+ * Returns the largest valid a, or 0 if no solution exists (counterexample).
+ */
+static inline uint64_t find_solution_with_sieve(uint64_t N, uint64_t a_max,
+                                                 const PrimeSieve *sieve,
+                                                 uint64_t *p_out) {
+    uint64_t a = a_max;
+    uint64_t candidate = (N - a * a) >> 1;
+    uint64_t delta = 2 * (a - 1);
+
+    /* Iterate in reverse: largest a first means smallest candidate p first */
+    while (1) {
+        if (candidate >= 2) {
+            SOLVE_TRACK_CANDIDATE(candidate);
+
+            if (is_candidate_prime_with_sieve(candidate, sieve)) {
+                if (p_out) *p_out = candidate;
+                SOLVE_TRACK_SOLUTION_FOUND();
+                return a;
+            }
+        }
+
+        if (a < 3) break;
+
+        candidate += delta;
+        delta -= 4;
+        a -= 2;
+    }
+
+    SOLVE_TRACK_SOLUTION_FOUND();
+    return 0;  /* Counterexample! */
+}
+
+/**
+ * Convenience wrapper: compute N and a_max from n, then call sieve version.
+ */
+static inline uint64_t find_solution_sieve(uint64_t n, const PrimeSieve *sieve,
+                                            uint64_t *p_out) {
+    uint64_t N = 8 * n + 3;
+    uint64_t a_max = isqrt64(N);
+
+    /* Ensure a_max is odd */
+    if ((a_max & 1) == 0) a_max--;
+
+    return find_solution_with_sieve(N, a_max, sieve, p_out);
 }
 
 /* ========================================================================== */
